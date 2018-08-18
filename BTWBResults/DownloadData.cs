@@ -34,10 +34,17 @@ namespace BTWBResults
             //WebClient.UploadValues is equivalent of Http url-encode type post
             client.Method = "POST";
             response = client.UploadString(new Uri(address + "session"), postData);
+            
+            //Get correct member number from login response
+            Regex findMemberNum = new Regex("/members/[0-9]+");
+            string mat = findMemberNum.Match(response).Value;
+            string memberNum = mat.Split('/')[2];
 
+
+            Uri url = new Uri(address + "members/" + memberNum + "/workout_sessions.csv");
             try
             {
-                client.DownloadFile(new Uri(address + "members/164332/workout_sessions.csv"), FileName);
+                client.DownloadFile(url, FileName);
             }
             catch (WebException ex)
             {
