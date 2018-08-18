@@ -735,6 +735,12 @@ namespace BTWBResults
         {
             SetLoginInfo();
         }
+
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            About about = new About();
+            about.ShowDialog();
+        }
         
     }
 }

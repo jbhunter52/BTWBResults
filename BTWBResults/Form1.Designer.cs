@@ -74,28 +74,28 @@
             // changeLoginToolStripMenuItem
             // 
             this.changeLoginToolStripMenuItem.Name = "changeLoginToolStripMenuItem";
-            this.changeLoginToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.changeLoginToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.changeLoginToolStripMenuItem.Text = "Change Login";
             this.changeLoginToolStripMenuItem.Click += new System.EventHandler(this.changeLoginToolStripMenuItem_Click);
             // 
             // importDataToolStripMenuItem
             // 
             this.importDataToolStripMenuItem.Name = "importDataToolStripMenuItem";
-            this.importDataToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.importDataToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.importDataToolStripMenuItem.Text = "Import Data";
             this.importDataToolStripMenuItem.Click += new System.EventHandler(this.importDataToolStripMenuItem_Click);
             // 
             // openDataToolStripMenuItem
             // 
             this.openDataToolStripMenuItem.Name = "openDataToolStripMenuItem";
-            this.openDataToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.openDataToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.openDataToolStripMenuItem.Text = "Open Data";
             this.openDataToolStripMenuItem.Click += new System.EventHandler(this.openDataToolStripMenuItem_Click);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
@@ -112,6 +112,7 @@
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
             this.aboutToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.aboutToolStripMenuItem.Text = "About";
+            this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
             // 
             // splitContainer1
             // 
