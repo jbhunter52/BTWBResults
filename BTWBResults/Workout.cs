@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace BTWBResults
 {
-    class Activity
+    public class Activity
     {
         public DateTime Date;
         public string Workout;
@@ -19,6 +19,7 @@ namespace BTWBResults
         public string FormatedResult;
         public string Notes;
         public string Description;
+        public bool Erg = false;
 
         public Activity(string[] row)
         {
@@ -49,6 +50,7 @@ namespace BTWBResults
             FormatedResult = split[7];
             Notes = split[8];
             Description = split[9];
+            bool erg = false;
         }
 
         private IEnumerable<string> SplitCSV(string input)

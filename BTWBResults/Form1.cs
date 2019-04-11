@@ -12,6 +12,7 @@ using System.Diagnostics;
 using CsvHelper;
 using System.Windows.Forms.DataVisualization.Charting;
 using MathNet.Numerics;
+using System.Text.RegularExpressions;
 
 namespace BTWBResults
 {
@@ -33,6 +34,7 @@ namespace BTWBResults
             treeView1.Nodes.Add("2", "Power Chart");
             treeView1.Nodes.Add("3", "Active Days Chart");
             treeView1.Nodes.Add("4", "Sessions Chart");
+            treeView1.Nodes.Add("5", "Erg Chart");
             CurrentChart = HistogramType.Volume;
 
             Font = new Font("Microsoft Sans Serif", 12.0f, FontStyle.Bold);
@@ -92,6 +94,24 @@ namespace BTWBResults
                 string filename = Path.GetFullPath(file);
                 Data.AddRange(ParseFile(filename));
             }
+
+            //Fix work performed for Echo Bike
+            //Fix volume for "Echo Bike Calories"
+            //foreach (Activity wo in Data)
+            //if (wo.Workout.Contains("Echo Bike Calories") && wo.WorkPerformed == 0)
+            //{
+            //    if (wo.Workout.Contains("AMReps") || wo.Workout.Contains("Tabata"))
+            //    {
+            //        wo.WorkPerformed = int.Parse(wo.Result) * 691;
+            //    }
+            //    if (wo.Workout.Contains("FT"))
+            //    {
+            //        string[] split = wo.Description.Split(' ');
+            //        int cals = int.Parse(split[0]);
+            //        wo.WorkPerformed = cals * 691;
+            //    }
+            //}
+
             Debug.WriteLine("Number of workouts, " + Data.Count.ToString());
             return true;
         }
@@ -99,9 +119,106 @@ namespace BTWBResults
         private List<Activity> ParseFile(string file)
         {
             List<Activity> workouts = new List<Activity>();
+
+            //Get First Line
+            StreamReader streamReader = new StreamReader(file);
+            string firstLine = streamReader.ReadLine();
+            streamReader.Close();
+
+
             TextReader sr = File.OpenText(file);
             var parser = new CsvParser(sr);
             string[] row = parser.Read();
+            List<string[]> newLines = new List<string[]>();
+            while (true)
+            {
+                row = parser.Read();
+                newLines.Add(row);
+                if (row == null)
+                { break; }
+            }
+            sr.Close();
+
+            File.Delete(file);
+            StreamWriter sw = new StreamWriter(file, false);
+            sw.WriteLine(firstLine);
+            sw.Flush();
+            using (var csv = new CsvWriter(sw))
+            {
+                foreach (string[] line in newLines)
+                {
+                    if (line != null)
+                    {
+                        string Workout = line[1];
+                        string Description = line[9];
+                        if ((Workout.Contains("Echo Bike Calories") || Description.Contains("Echo Bike Calories")) && line[5].Equals("0"))
+                        {
+                            string Result = line[2];
+                            string WorkPerformed = line[5];
+                            
+                            if (Workout.Contains("AMReps") || Workout.Contains("Tabata"))
+                            {
+                                WorkPerformed = (int.Parse(Result) * 639).ToString();
+                            }
+                            else if (Workout.Contains("RFT"))
+                            {
+                                string[] split = Description.Split('\n');
+                                Regex regex = new Regex("[0-9]+");
+                                int rnds = 0;
+                                int cals = 0;
+                                foreach (string s in split)
+                                {
+                                    if (s.Contains("Echo"))
+                                    {
+                                        Match m = regex.Match(s);
+                                        if (m.Success)
+                                        {
+                                            cals = int.Parse(m.Value);
+                                            
+                                        }
+                                    }
+                                    if (s.Contains("rounds"))
+                                    {
+                                        Match m = regex.Match(s);
+                                        if (m.Success)
+                                        {
+                                            rnds = int.Parse(m.Value);
+
+                                        }
+                                    }
+                                }
+                                if (cals > 0 && rnds > 0)
+                                    WorkPerformed = (rnds * cals * 639).ToString();
+                            }
+                            else if (Workout.Contains("FT"))
+                            {
+                                string[] split = Description.Split(' ');
+                                int cals = int.Parse(split[0]);
+                                WorkPerformed = (cals * 639).ToString();
+                            }
+
+                            line[5] = WorkPerformed;
+                        }
+
+                        for (int i = 0; i < 10; i++)
+                        {
+                            string s = line[i];
+                            csv.WriteField(s);
+                        }
+                        Activity act = new Activity(line);
+                        Erg erg = new Erg(act);
+                        csv.WriteField(erg.ParsedErg.ToString());
+                        
+                        csv.NextRecord();
+                    }
+                }
+            }
+            sw.Close();
+
+
+            sr = File.OpenText(file);
+            parser = new CsvParser(sr);
+            row = parser.Read();
             while (true)
             {
                 row = parser.Read();
@@ -111,6 +228,9 @@ namespace BTWBResults
                 workouts.Add(wo);
             }
             sr.Close();
+
+
+
             return workouts;
         }
 
@@ -145,6 +265,11 @@ namespace BTWBResults
                 UpdateHistogramChartData(HistogramType.Sessions);
                 //UpdateActiveDaysChartData();
                 CurrentChart = HistogramType.Sessions;
+            }
+            else if (selectedNode.Text.Equals("Erg Chart"))
+            {
+                UpdateErgChartDisplay();
+                UpdateErgChartData();
             }
             SetChartFont();
         }
@@ -531,7 +656,52 @@ namespace BTWBResults
 
 
         }
+        private void UpdateErgChartDisplay()
+        {
+            splitContainer2.Panel1.Controls.Clear();
 
+            CheckBox cbRow = new CheckBox();
+            cbRow.Text = "Include Row";
+            cbRow.Location = new Point(10, 10);
+            cbRow.Size = new System.Drawing.Size(140, 17);
+            cbRow.CheckAlign = ContentAlignment.MiddleLeft;
+            cbRow.Checked = false;
+            cbRow.CheckedChanged += cbRow_CheckedChanged;
+
+            Label label1 = new Label();
+            label1.Text = "Months";
+            label1.Size = new System.Drawing.Size(50, 12);
+            label1.Location = new Point(10, 50);
+
+            TextBox tbMonths = new TextBox();
+            tbMonths.Text = "3";
+            tbMonths.Size = new System.Drawing.Size(60, 12);
+            tbMonths.Location = new Point(70, 70);
+            tbMonths.Leave += tbMonthsErg_Leave;
+
+            TrackBar tb = new TrackBar();
+            tb.Size = new System.Drawing.Size(600, 50);
+            tb.Location = new Point(250, 50);
+            tb.Minimum = 0;
+            tb.Maximum = GetTotDays();
+            tb.Value = tb.Maximum;
+            tb.ValueChanged += tbErg_ValueChanged;
+
+            CheckBox cbBike = new CheckBox();
+            cbBike.Text = "Include Bike";
+            cbBike.Location = new Point(10, 30);
+            cbBike.Size = new System.Drawing.Size(140, 17);
+            cbBike.CheckAlign = ContentAlignment.MiddleLeft;
+            cbBike.Checked = false;
+            cbBike.CheckedChanged += cbBike_CheckedChanged;
+
+            splitContainer2.Panel1.Controls.Add(cbRow);
+            splitContainer2.Panel1.Controls.Add(label1);
+            splitContainer2.Panel1.Controls.Add(tbMonths);
+            splitContainer2.Panel1.Controls.Add(tb);
+            splitContainer2.Panel1.Controls.Add(cbBike);
+
+        }
         void tbMonths_Leave(object sender, EventArgs e)
         {
             UpdatePowerChartData();
@@ -539,27 +709,29 @@ namespace BTWBResults
 
         void tb_ValueChanged(object sender, EventArgs e)
         {
-            //TrackBar tb = (TrackBar)sender;
-            //TextBox tbMonths = (TextBox)splitContainer2.Panel1.Controls[2];
-
-            //double months = Double.Parse(tbMonths.Text);
-            //TimeSpan span = new TimeSpan((int)(months * 30), 0, 0, 0, 0);
-
-            //DateTime minDate = GetMinDate();
-            //DateTime maxDate = GetMaxDate();
-            //int totDays = GetTotDays();
-
-
-
-            //DateTime endTime = minDate.AddDays(tb.Value);
-            //DateTime startTime = endTime.Subtract(span);
-
             UpdatePowerChartData();
+        }
+        void tbMonthsErg_Leave(object sender, EventArgs e)
+        {
+            UpdateErgChartData();
+        }
+
+        void tbErg_ValueChanged(object sender, EventArgs e)
+        {
+            UpdateErgChartData();
         }
 
         void cbRunning_CheckedChanged(object sender, EventArgs e)
         {
             UpdatePowerChartData();
+        }
+        void cbRow_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateErgChartData();
+        }
+        void cbBike_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateErgChartData();
         }
         private void UpdatePowerChartData()
         {
@@ -669,7 +841,173 @@ namespace BTWBResults
             chart.ChartAreas[0].AxisX.Title = "Work Duration";
             chart.ChartAreas[0].AxisY.Title = "Total work (ft-lbs/sec)";
         }
+        private void ErgSerialization(List<Erg> ergdata)
+        {
+            StreamWriter sw = new StreamWriter(Path.Combine(Environment.CurrentDirectory, "erg.txt"), false);
 
+            Erg E = new Erg();
+            sw.WriteLine(E.GetDesc());
+
+            foreach (Erg e in ergdata)
+            {
+                sw.WriteLine(e.Serialize());
+            }
+            sw.Close();
+        }
+        private void UpdateErgChartData()
+        {
+            splitContainer2.Panel2.Controls.Clear();
+            splitContainer2.Panel2.Controls.Add(chart);
+
+            chart.ChartAreas.Clear();
+            chart.Series.Clear();
+            ChartArea area = new ChartArea("1");
+            //area.AxisX.Interval = 5;
+            //area.AxisX.IntervalType = DateTimeIntervalType.Number;
+            //area.AxisX.LabelStyle.Format = "{0.0}";
+            chart.ChartAreas.Add(area);
+
+
+            List<Erg> ErgList = new List<Erg>();
+
+            foreach (Activity a in Data)
+            {
+                if (a.WorkPerformed > 0)
+                {
+                    Erg m = new Erg(a);
+                    if (m.ParsedErg)
+                    {
+                        ErgList.Add(m);
+                        a.Erg = true;
+                    }
+                }
+            }
+
+
+
+            CheckBox cbC2 = (CheckBox)splitContainer2.Panel1.Controls[0];
+            CheckBox cbEcho = (CheckBox)splitContainer2.Panel1.Controls[4];
+            TextBox tbMonths = (TextBox)splitContainer2.Panel1.Controls[2];
+            TrackBar tb = (TrackBar)splitContainer2.Panel1.Controls[3];
+
+            Series ser = new Series();
+
+            ser.ChartType = SeriesChartType.Point;
+
+            double months = Double.Parse(tbMonths.Text);
+            TimeSpan span = new TimeSpan((int)(months * 30), 0, 0, 0, 0);
+
+            DateTime minDate = GetMinDate();
+            DateTime maxDate = GetMaxDate();
+            int totDays = GetTotDays();
+
+            DateTime endTime = minDate.AddDays(tb.Value);
+            DateTime startTime = endTime.Subtract(span);
+            List<double> x = new List<double>();
+            List<double> y = new List<double>();
+            foreach (Erg m in ErgList)
+            {
+                bool include = false;
+                Activity a = m.Activity;
+                if (cbC2.Checked)
+                    if (m.Type == ErgType.Row)
+                        include = true;
+                if (cbEcho.Checked)
+                    if (m.Type == ErgType.Bike)
+                        include = true;
+
+                if ((a.Date < startTime) | (a.Date > endTime.AddDays(1)))
+                    include = false;
+
+                if (include)
+                {
+                    double mins = (double)m.RndTime / 60;
+                    DataPoint dp = new DataPoint();
+                    dp.ToolTip = mins.ToString("0.##") + " mins," + m.calPerMin.ToString("0.##") + " cal/min\n" + a.Date.ToString("MM/dd/yyyy") + '\n' + a.Workout + '\n' + a.Description + "\n\n" + a.Notes;
+                    dp.MarkerSize = 6;
+
+                    if (m.Type == ErgType.Row)
+                        dp.Color = Color.Red;
+                    if (m.Type == ErgType.Bike)
+                        dp.Color = Color.Black;
+
+                    dp.SetValueXY(mins, m.calPerMin);
+                    ser.Points.Add(dp);
+                    x.Add(mins);
+                    y.Add(m.calPerMin);
+                }
+            }
+
+            ErgSerialization(ErgList);
+
+            double xMax = 0;
+            double yMax = 0;
+            foreach (double v in x)
+            {
+                if (v > xMax)
+                    xMax = v;
+
+            }
+            foreach (double v in y)
+            {
+                if (v > yMax)
+                    yMax = v;
+            }
+
+            area.AxisY.Minimum = 0;
+            area.AxisY.Maximum = ((int)(yMax/5) +1)*5;
+            area.AxisX.Minimum = 0;
+            area.AxisX.Maximum = ((int)(xMax / 5) + 1) * 5; ;
+            area.AxisY.Title = "cal/min";
+
+            area.AxisX.Interval = 5;
+            area.AxisX.MajorGrid.Enabled = true;
+            area.AxisX.MinorGrid.Enabled = true;
+            area.AxisX.MinorGrid.LineDashStyle = ChartDashStyle.Dash;
+            area.AxisX.MinorGrid.LineWidth = 1;
+            area.AxisX.MinorGrid.LineColor = Color.Gray;
+            area.AxisX.MajorGrid.Interval = 5;
+            area.AxisX.MajorGrid.LineDashStyle = ChartDashStyle.Solid;
+            area.AxisX.MajorGrid.LineWidth = 2;
+            area.AxisX.MajorGrid.LineColor = Color.Black;
+
+            area.AxisY.Interval = 5;
+            area.AxisY.MajorGrid.Enabled = true;
+            area.AxisY.MinorGrid.Enabled = true;
+            area.AxisY.MinorGrid.LineDashStyle = ChartDashStyle.Dash;
+            area.AxisY.MinorGrid.LineWidth = 1;
+            area.AxisY.MinorGrid.LineColor = Color.Gray;
+            area.AxisY.MajorGrid.Interval = 5;
+            area.AxisY.MajorGrid.LineDashStyle = ChartDashStyle.Solid;
+            area.AxisY.MajorGrid.LineWidth = 2;
+            area.AxisY.MajorGrid.LineColor = Color.Black;
+
+            if (x.Count > 3)
+            {
+                //Func<double, double> f = Fit.LineFunc(x.ToArray(), y.ToArray());
+                //Func<double, double> f = Fit.LinearCombinationFunc(x.ToArray(), y.ToArray(), x => 1.0, x => Math.Log(x));
+                Func<double, double> f = Fit.LinearCombinationFunc(x.ToArray(), y.ToArray(), dx => 1.0, dx => Math.Log(dx));
+
+
+                int num = 100;
+                Series serFit = new Series();
+                serFit.ChartType = SeriesChartType.Line;
+                double minV = x.Min();
+                double maxV = x.Max();
+                double d = maxV - minV;
+                for (int i = 0; i < num; i++)
+                {
+                    double t = ((i) * (d / 100)) + minV;
+                    serFit.Points.AddXY(t, f(t));
+                    //Debug.WriteLine(f(t).ToString());
+                }
+
+                chart.Series.Add(serFit);
+            }
+            chart.Series.Add(ser);
+            chart.ChartAreas[0].AxisX.Title = "Work Duration";
+            chart.ChartAreas[0].AxisY.Title = "Cal/min";
+        }
         private void treeView1_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
         {
             treeView1.SelectedNode = e.Node;
