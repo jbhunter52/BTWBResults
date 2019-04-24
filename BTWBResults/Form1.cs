@@ -23,6 +23,7 @@ namespace BTWBResults
         private HistogramType CurrentChart;
         public Chart chart;
         private Font Font;
+        private List<Erg> ErgList;
         public Form1()
         {
             InitializeComponent();
@@ -662,6 +663,7 @@ namespace BTWBResults
 
             CheckBox cbRow = new CheckBox();
             cbRow.Text = "Include Row";
+            cbRow.Name = "cbRow";
             cbRow.Location = new Point(10, 10);
             cbRow.Size = new System.Drawing.Size(140, 17);
             cbRow.CheckAlign = ContentAlignment.MiddleLeft;
@@ -672,6 +674,14 @@ namespace BTWBResults
             label1.Text = "Months";
             label1.Size = new System.Drawing.Size(50, 12);
             label1.Location = new Point(10, 50);
+
+            Button button3d = new Button();
+            button3d.Text = "3D";
+            button3d.Name = "button3d";
+            button3d.UseVisualStyleBackColor = true;
+            button3d.Size = new System.Drawing.Size(75, 23);
+            button3d.Location = new Point(150, 10);
+            button3d.Click += button3d_Click;
 
             TextBox tbMonths = new TextBox();
             tbMonths.Text = "3";
@@ -689,6 +699,7 @@ namespace BTWBResults
 
             CheckBox cbBike = new CheckBox();
             cbBike.Text = "Include Bike";
+            cbBike.Name = "cbBike";
             cbBike.Location = new Point(10, 30);
             cbBike.Size = new System.Drawing.Size(140, 17);
             cbBike.CheckAlign = ContentAlignment.MiddleLeft;
@@ -700,6 +711,20 @@ namespace BTWBResults
             splitContainer2.Panel1.Controls.Add(tbMonths);
             splitContainer2.Panel1.Controls.Add(tb);
             splitContainer2.Panel1.Controls.Add(cbBike);
+            splitContainer2.Panel1.Controls.Add(button3d);
+
+        }
+
+        void button3d_Click(object sender, EventArgs e)
+        {
+            Chart3D chart3d = new Chart3D();
+            chart3d.ErgList = ErgList;
+            CheckBox cbRow = (CheckBox)this.Controls.Find("cbRow", true)[0];
+            CheckBox cbBike = (CheckBox)this.Controls.Find("cbBike", true)[0];
+            chart3d.Row = cbRow.Checked;
+            chart3d.Bike = cbBike.Checked;
+            chart3d.Show();
+
 
         }
         void tbMonths_Leave(object sender, EventArgs e)
@@ -868,7 +893,7 @@ namespace BTWBResults
             chart.ChartAreas.Add(area);
 
 
-            List<Erg> ErgList = new List<Erg>();
+            ErgList = new List<Erg>();
 
             foreach (Activity a in Data)
             {
@@ -939,6 +964,7 @@ namespace BTWBResults
             }
 
             ErgSerialization(ErgList);
+            
 
             double xMax = 0;
             double yMax = 0;
