@@ -24,6 +24,7 @@ namespace BTWBResults
         public Chart chart;
         private Font Font;
         private List<Erg> ErgList;
+        private HRdata HRData;
         public Form1()
         {
             InitializeComponent();
@@ -36,6 +37,7 @@ namespace BTWBResults
             treeView1.Nodes.Add("3", "Active Days Chart");
             treeView1.Nodes.Add("4", "Sessions Chart");
             treeView1.Nodes.Add("5", "Erg Chart");
+            treeView1.Nodes.Add("6", "Heart Rate");
             CurrentChart = HistogramType.Volume;
 
             Font = new Font("Microsoft Sans Serif", 12.0f, FontStyle.Bold);
@@ -43,10 +45,17 @@ namespace BTWBResults
         }
         private void SetChartFont()
         {
-            ChartArea ca = this.chart.ChartAreas[0];
-            ca.AxisX.TitleFont = Font;
-            ca.AxisY.TitleFont = Font;
-            this.chart.Series[0].Font = Font;
+            try
+            {
+                ChartArea ca = this.chart.ChartAreas[0];
+                ca.AxisX.TitleFont = Font;
+                ca.AxisY.TitleFont = Font;
+                this.chart.Series[0].Font = Font;
+            }
+            catch
+            {
+
+            }
         }
         private void importDataToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -88,7 +97,7 @@ namespace BTWBResults
                     return false;
             }
 
-            string[] files = Directory.GetFiles(filePath);
+            string[] files = Directory.GetFiles(filePath, "*.csv");
             Data = new List<Activity>();
             foreach (string file in files)
             {
@@ -272,8 +281,253 @@ namespace BTWBResults
                 UpdateErgChartDisplay();
                 UpdateErgChartData();
             }
+            else if (selectedNode.Text.Equals("Heart Rate"))
+            {
+                UpdateHRChartDisplay();
+                UpdateHRChartData();
+            }
             SetChartFont();
         }
+
+        private void UpdateHRChartDisplay()
+        {
+            splitContainer2.Panel1.Controls.Clear();
+            TreeView tv = new TreeView();
+            tv.NodeMouseClick += HRNodeClick;
+            tv.Dock = DockStyle.Fill;
+            Chart chart1 = new Chart();
+            Chart chart2 = new Chart();
+            chart1.Dock = DockStyle.Fill;
+            chart2.Dock = DockStyle.Fill;
+            chart1.Name = "chart1";
+            chart2.Name = "chart2";
+
+            splitContainer2.Orientation = Orientation.Vertical;
+            splitContainer2.Panel1.Controls.Add(tv);
+
+            SplitContainer chartsplit = new SplitContainer();
+            chartsplit.Name = "chartsplit";
+            chartsplit.Panel2MinSize = 25;
+            chartsplit.Orientation = Orientation.Horizontal;
+            chartsplit.Panel1.Controls.Add(chart1);
+            chartsplit.Panel2.Controls.Add(chart2);
+            chartsplit.Dock = DockStyle.Fill;
+            splitContainer2.Panel2.Controls.Add(chartsplit);
+        }
+
+        private void HRNodeClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            SplitContainer chartsplit = (SplitContainer)splitContainer2.Panel2.Controls["chartsplit"];
+            Chart chart1 = (Chart)chartsplit.Panel1.Controls["chart1"];
+
+            Chart chart2 = (Chart)chartsplit.Panel2.Controls["chart2"];
+
+            chart1.ChartAreas.Clear();
+            chart2.ChartAreas.Clear();
+
+            ChartArea area = new ChartArea("0");
+            area.AxisX.Minimum = 0;
+            area.AxisX.Interval = 3;
+            area.AxisX.IntervalType = DateTimeIntervalType.Number;
+            area.AxisX.LabelStyle.Format = "#.##";
+            chart1.ChartAreas.Add("0");
+            chart2.ChartAreas.Add("1");
+
+            TreeView tv = (TreeView)splitContainer2.Panel1.Controls[0];
+
+            if (ModifierKeys.HasFlag(Keys.Control))
+            {
+                TreeNode selected = tv.SelectedNode;
+                selected.BackColor = Color.Aqua;
+            }
+            else
+            {
+                chart1.Series.Clear();
+                chart2.Series.Clear();
+                foreach (TreeNode tn in tv.Nodes)
+                {
+                    tn.BackColor = Color.White;
+                }
+            }
+            TreeNode node = e.Node;
+
+            Series s = new Series();
+            s.ChartType = SeriesChartType.Line;
+            s.BorderWidth = 3;
+            HRWorkout hr = (HRWorkout)node.Tag;
+
+            List<double> xarr = new List<double>();
+            List<double> yarr = new List<double>();
+            foreach (var samp in hr.exercises[0].samples.heartRate)
+            {
+
+                double x = (samp.dateTime - hr.startTime).TotalSeconds / 60;
+                int y = samp.value;
+                xarr.Add(x);
+                yarr.Add(y);
+            }
+
+            for (int i = 0; i < xarr.Count; i++)
+            {
+                DataPoint dp = new DataPoint();
+                dp.SetValueXY(xarr[i], yarr[i]);
+                dp.ToolTip = xarr[i].ToString("#.##") + " mins" + "\n" + yarr[i].ToString() + " bpm" + "\n" + node.Text;
+                s.Points.Add(dp);
+            }
+
+            RemoveZeros(yarr);
+
+            #region old
+            //double sampRate = (double)xarr.Count / (xarr[xarr.Count - 1] * 60);
+
+            //MathNet.Filtering.Median.OnlineMedianFilter filter = 
+            //    new MathNet.Filtering.Median.OnlineMedianFilter(17);
+
+            //double[] filtered = filter.ProcessSamples(yarr.ToArray());
+
+            //Series filteredHR = new Series();
+            //filteredHR.ChartType = SeriesChartType.Line;
+            //filteredHR.BorderWidth = 3;
+            //filteredHR.Color = Color.Orange;
+
+            //for (int i = 0; i < xarr.Count; i++)
+            //{
+            //    DataPoint dp = new DataPoint(xarr[i], filtered[i]);
+            //    filteredHR.Points.Add(dp);
+            //}
+            //chart1.Series.Add(filteredHR);
+            //chart2.Series.Add(SeriesDerivative(filteredHR, 100));
+            #endregion
+
+            MathNet.Numerics.Interpolation.IInterpolation interp = MathNet.Numerics.Interpolate.CubicSplineRobust(xarr, yarr);
+            Series splineHR = new Series();
+            splineHR.ChartType = SeriesChartType.Line;
+            splineHR.BorderWidth = 3;
+
+            for (int i = 0; i < xarr.Count; i++)
+            {
+                DataPoint dp = new DataPoint(xarr[i], interp.Interpolate(xarr[i]));
+                splineHR.Points.Add(dp);
+            }
+
+            Series sdiff = new Series();
+            sdiff.ChartType = SeriesChartType.Line;
+            sdiff.BorderWidth = 3;
+
+            for (int i = 0; i < xarr.Count; i++)
+            {
+                DataPoint dp = new DataPoint(xarr[i], interp.Differentiate(xarr[i]));
+                sdiff.Points.Add(dp);
+            }
+
+            chart1.Series.Add(splineHR);
+            chart2.Series.Add(sdiff);
+
+        }
+
+        
+        public void RemoveZeros(List<double> yarr)
+        {
+            List<int> ind = new List<int>();
+
+            for (int i = 1; i < yarr.Count-1; i++)
+            {
+                double y = yarr[i];
+
+                if (y == 0)
+                {
+                    ind.Add(i);
+                }
+                else if (ind.Count > 0)
+                {
+                    double initial = yarr[ind[0] - 1];
+                    double final = yarr[ind[ind.Count - 1] + 1];
+
+                    double diff = final - initial;
+                    double dy = diff / (ind.Count + 2);
+
+                    for (int j = 0; j < ind.Count; j++)
+                    {
+                        yarr[ind[j]] = initial + dy * (j + 1);
+                    }
+                    ind.Clear();
+                }
+
+                
+            }
+        }
+        public Series SeriesDerivative(Series s, int hrCutoff)
+        {
+            Series d = new Series();
+            d.ChartType = s.ChartType;
+            d.BorderWidth = s.BorderWidth;
+
+            double dx = s.Points[1].XValue - s.Points[0].XValue;
+            double dy = s.Points[1].YValues[0] - s.Points[0].YValues[0];
+            DataPoint first = new DataPoint(s.Points[0].XValue, dy / dx);
+            d.Points.Add(first);
+
+            for (int i = 1; i < s.Points.Count-1;i++)
+            {
+                dx = s.Points[i+1].XValue - s.Points[i-1].XValue;
+                dy = s.Points[i+1].YValues[0] - s.Points[i-1].YValues[0];
+                DataPoint dp = new DataPoint(s.Points[i].XValue, dy / dx);
+                d.Points.Add(dp);
+            }
+
+            int cnt = s.Points.Count;
+            dx = s.Points[cnt-1].XValue - s.Points[cnt-2].XValue;
+            dy = s.Points[cnt-1].YValues[0] - s.Points[cnt-2].YValues[0];
+            DataPoint last = new DataPoint(s.Points[cnt-1].XValue, dy / dx);
+            d.Points.Add(last);
+
+            //cutoff
+            for (int i = 0; i < s.Points.Count; i++)
+            {
+                if (s.Points[i].YValues[0] < hrCutoff)
+                {
+                    d.Points[i].YValues[0] = 0;
+                }
+            }
+
+            return d;
+        }
+
+        private void UpdateHRChartData()
+        {
+            TreeView tv = (TreeView)splitContainer2.Panel1.Controls[0];
+
+            HRData = new HRdata(Application.StartupPath);
+            UpdateErgList();
+
+            foreach (var series in HRData.HRWorkouts)
+            {
+                TreeNode n = new TreeNode();
+                n.Text = series.startTime.ToShortDateString();
+                n.Tag = series;
+
+                foreach (Erg e in ErgList)
+                {
+                    List<Erg> matches = new List<Erg>();
+                    if (e.Activity.Date.Date == series.startTime.Date)
+                    {
+                        int ergTime = e.WorkTime + e.RestTime;
+                        int hrTime = series.GetTotalSecs();
+
+                        if (hrTime > ergTime)
+                        {
+                            n.Text += ", " + e.Activity.Workout;
+                            e.Activity.Date = new DateTime();
+                            break;
+                        }
+                    }  
+                }
+
+                tv.Nodes.Add(n);
+            }
+        }
+        
+
         private void chart_MouseWheel(object sender, MouseEventArgs e)
         {
             var chart = (Chart)sender;
@@ -879,20 +1133,8 @@ namespace BTWBResults
             }
             sw.Close();
         }
-        private void UpdateErgChartData()
+        private void UpdateErgList()
         {
-            splitContainer2.Panel2.Controls.Clear();
-            splitContainer2.Panel2.Controls.Add(chart);
-
-            chart.ChartAreas.Clear();
-            chart.Series.Clear();
-            ChartArea area = new ChartArea("1");
-            //area.AxisX.Interval = 5;
-            //area.AxisX.IntervalType = DateTimeIntervalType.Number;
-            //area.AxisX.LabelStyle.Format = "{0.0}";
-            chart.ChartAreas.Add(area);
-
-
             ErgList = new List<Erg>();
 
             foreach (Activity a in Data)
@@ -907,8 +1149,22 @@ namespace BTWBResults
                     }
                 }
             }
+        }
+        private void UpdateErgChartData()
+        {
+            splitContainer2.Panel2.Controls.Clear();
+            splitContainer2.Panel2.Controls.Add(chart);
+
+            chart.ChartAreas.Clear();
+            chart.Series.Clear();
+            ChartArea area = new ChartArea("1");
+            //area.AxisX.Interval = 5;
+            //area.AxisX.IntervalType = DateTimeIntervalType.Number;
+            //area.AxisX.LabelStyle.Format = "{0.0}";
+            chart.ChartAreas.Add(area);
 
 
+            UpdateErgList();
 
             CheckBox cbC2 = (CheckBox)splitContainer2.Panel1.Controls[0];
             CheckBox cbEcho = (CheckBox)splitContainer2.Panel1.Controls[4];
@@ -964,26 +1220,15 @@ namespace BTWBResults
             }
 
             ErgSerialization(ErgList);
-            
 
-            double xMax = 0;
-            double yMax = 0;
-            foreach (double v in x)
+
+            if (x.Count > 0)
             {
-                if (v > xMax)
-                    xMax = v;
-
+                area.AxisY.Minimum = ((int)(y.Min() / 5)) * 5;
+                area.AxisY.Maximum = ((int)(y.Max() / 5) + 1) * 5;
+                area.AxisX.Minimum = 0;
+                area.AxisX.Maximum = ((int)(x.Max() / 5) + 1) * 5;
             }
-            foreach (double v in y)
-            {
-                if (v > yMax)
-                    yMax = v;
-            }
-
-            area.AxisY.Minimum = 0;
-            area.AxisY.Maximum = ((int)(yMax/5) +1)*5;
-            area.AxisX.Minimum = 0;
-            area.AxisX.Maximum = ((int)(xMax / 5) + 1) * 5; ;
             area.AxisY.Title = "cal/min";
 
             area.AxisX.Interval = 5;
@@ -1105,6 +1350,10 @@ namespace BTWBResults
             About about = new About();
             about.ShowDialog();
         }
-        
+
+        private void GethrToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            HRdata hr = new HRdata(Application.StartupPath);
+        }
     }
 }

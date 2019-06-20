@@ -88,7 +88,6 @@ namespace BTWBResults
             chart.Scene.Graph.Add(surface);
 
 
-
             Scatter scatter = new Scatter(coor.ToArray(), Color.RED, 10);
             chart.Scene.Graph.Add(scatter);
 

@@ -40,6 +40,7 @@
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.treeView1 = new System.Windows.Forms.TreeView();
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
+            this.gethrToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -66,6 +67,7 @@
             this.changeLoginToolStripMenuItem,
             this.importDataToolStripMenuItem,
             this.openDataToolStripMenuItem,
+            this.gethrToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             this.fileToolStripMenuItem.Size = new System.Drawing.Size(37, 20);
@@ -74,28 +76,28 @@
             // changeLoginToolStripMenuItem
             // 
             this.changeLoginToolStripMenuItem.Name = "changeLoginToolStripMenuItem";
-            this.changeLoginToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.changeLoginToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.changeLoginToolStripMenuItem.Text = "Change Login";
             this.changeLoginToolStripMenuItem.Click += new System.EventHandler(this.changeLoginToolStripMenuItem_Click);
             // 
             // importDataToolStripMenuItem
             // 
             this.importDataToolStripMenuItem.Name = "importDataToolStripMenuItem";
-            this.importDataToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.importDataToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.importDataToolStripMenuItem.Text = "Import Data";
             this.importDataToolStripMenuItem.Click += new System.EventHandler(this.importDataToolStripMenuItem_Click);
             // 
             // openDataToolStripMenuItem
             // 
             this.openDataToolStripMenuItem.Name = "openDataToolStripMenuItem";
-            this.openDataToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.openDataToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.openDataToolStripMenuItem.Text = "Open Data";
             this.openDataToolStripMenuItem.Click += new System.EventHandler(this.openDataToolStripMenuItem_Click);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
@@ -150,6 +152,13 @@
             this.splitContainer2.SplitterDistance = 109;
             this.splitContainer2.TabIndex = 3;
             // 
+            // gethrToolStripMenuItem
+            // 
+            this.gethrToolStripMenuItem.Name = "gethrToolStripMenuItem";
+            this.gethrToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.gethrToolStripMenuItem.Text = "gethr";
+            this.gethrToolStripMenuItem.Click += new System.EventHandler(this.GethrToolStripMenuItem_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -187,6 +196,7 @@
         private System.Windows.Forms.ToolStripMenuItem changeLoginToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem gethrToolStripMenuItem;
     }
 }
 
