@@ -1120,9 +1120,10 @@ namespace BTWBResults
             chart.ChartAreas[0].AxisX.Title = "Work Duration";
             chart.ChartAreas[0].AxisY.Title = "Total work (ft-lbs/sec)";
         }
-        private void ErgSerialization(List<Erg> ergdata)
+        private void ErgSerialization(List<Erg> ergdata, bool show)
         {
-            StreamWriter sw = new StreamWriter(Path.Combine(Environment.CurrentDirectory, "erg.txt"), false);
+            string ergListFile = Path.Combine(Environment.CurrentDirectory, "erg.csv");
+            StreamWriter sw = new StreamWriter(ergListFile, false);
 
             Erg E = new Erg();
             sw.WriteLine(E.GetDesc());
@@ -1132,6 +1133,11 @@ namespace BTWBResults
                 sw.WriteLine(e.Serialize());
             }
             sw.Close();
+
+            if (show)
+            {
+                Process.Start(ergListFile);
+            }
         }
         private void UpdateErgList()
         {
@@ -1219,9 +1225,7 @@ namespace BTWBResults
                 }
             }
 
-            ErgSerialization(ErgList);
-
-
+            
             if (x.Count > 0)
             {
                 area.AxisY.Minimum = ((int)(y.Min() / 5)) * 5;
@@ -1351,9 +1355,9 @@ namespace BTWBResults
             about.ShowDialog();
         }
 
-        private void GethrToolStripMenuItem_Click(object sender, EventArgs e)
+        private void ErgListToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            HRdata hr = new HRdata(Application.StartupPath);
+            ErgSerialization(ErgList, true);
         }
     }
 }
